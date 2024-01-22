@@ -1,0 +1,12 @@
+
+
+services:
+  twitch_bot:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    environment:
+      - DATABASE_DSN=1
+      - TWITCH_USERNAME=1
+      - TWITCH_OAUTH_TOKEN=1
+      - SECRET=1
