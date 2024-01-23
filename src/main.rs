@@ -29,22 +29,28 @@ async fn check_for_new_users(ctx: Arc<Pool<Postgres>>, users: Arc<Mutex<Vec<Stri
 
     loop {
         let users_with_integrations = LinkedIndegration::fetch_users_with_integration(&ctx, twitch_integration.clone()).await;
-
-        for user in users_with_integrations {
-            let mut users = users.lock().await;
+        //Checking if there is some user disapeared from remaining users and if so, leaving the channel
+        
+        for user in users_with_integrations.clone() {
+            let mut users_locked = users.lock().await;
 
             let id = &user.platform_id;
-            if !users.contains(&id) {
-                users.push(id.to_string());
+            if !users_locked.contains(&id) && user.visible {
+                let user = user.clone();
+                users_locked.push(id.to_string());
                 let _ = client.join(user.display_name);
+                
             }
 
-            if users.contains(&id) && !user.visible {
-                let index_of_user = users.iter().position(|x| *x == user.platform_id).unwrap();
-                users.remove(index_of_user);
+            if users_locked.contains(&id) && !user.visible {
+                let user = user.clone();
+                info!("Parting from {}", user.display_name);
+                let _ = client.part(user.display_name);
+
+                //Removing from users
+                users_locked.retain(|x| x != id);
             }
         }
-
 
         time::sleep(check_time.unwrap_or(Duration::from_secs(5))).await;
     }
@@ -121,7 +127,6 @@ async fn main() {
             match message {
                 twitch_irc::message::ServerMessage::Join(join_message) => {
                     info!("Joined {}", join_message.channel_login);
-                    joined_users.lock().await.push(join_message.channel_login.clone());
                 }
                 twitch_irc::message::ServerMessage::Privmsg(private_message) => {
 
@@ -164,12 +169,14 @@ async fn main() {
                         }
                     }
                 }
+                twitch_irc::message::ServerMessage::Part(part_message) => {
+                    info!("Parted {}", part_message.channel_login);
+                }
                 _ => {}
             }
         }
     });
 
-    client.clone().join("dhcpcd".to_owned()).unwrap();
 
     let _ = tokio::try_join!(
         tokio::spawn(async move {

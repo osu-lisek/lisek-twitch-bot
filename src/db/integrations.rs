@@ -23,7 +23,7 @@ impl Integration {
     }
 }
 
-#[derive(FromRow, Debug)]
+#[derive(FromRow, Debug, Clone)]
 pub struct LinkedIndegration {
     pub id: String,
     #[sqlx(rename = "displayName")]
