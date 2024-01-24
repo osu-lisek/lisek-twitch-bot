@@ -38,7 +38,7 @@ async fn check_for_new_users(ctx: Arc<Pool<Postgres>>, users: Arc<Mutex<Vec<Stri
             if !users_locked.contains(&id) && user.visible {
                 let user = user.clone();
                 users_locked.push(id.to_string());
-                let _ = client.join(user.display_name);
+                let _ = client.join(user.display_name.to_lowercase());
                 
             }
 
@@ -129,11 +129,6 @@ async fn main() {
                     info!("Joined {}", join_message.channel_login);
                 }
                 twitch_irc::message::ServerMessage::Privmsg(private_message) => {
-
-                    if !joined_users.lock().await.contains(&private_message.channel_login) {
-                        continue;
-                    }
-
                     trace!("Received message: {}", private_message.message_text);
                     for regex in regexes.clone().into_iter() {
                         let matches = regex.captures(&private_message.message_text);
@@ -151,9 +146,9 @@ async fn main() {
                         if let Some(beatmap) = beatmap {
                             trace!("Found beatmap: {:?}", beatmap);
                             ctx
-                                .say(private_message.channel_login.to_owned(), beatmap.format())
+                                .say(private_message.channel_login.to_owned().to_lowercase(), beatmap.format())
                                 .await
-                                .unwrap();
+                                .expect("Failed to send message.");
 
                             //Sending it to user
                             let user = users_with_twitch_integration.iter().find(|x| x.platform_id == private_message.channel_id);
