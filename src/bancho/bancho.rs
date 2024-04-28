@@ -1,11 +1,11 @@
 use serde::Deserialize;
 use serde_json::json;
-use tracing::error;
+use tracing::{error, info};
 
 #[derive(Debug, Deserialize)]
 pub struct MessageResponse {
     pub ok: bool,
-    pub message: String
+    pub message: Option<String>
 }
 
 pub async fn send_message(user_id: i32, message: String, secret: String) -> Option<MessageResponse>{
@@ -13,9 +13,8 @@ pub async fn send_message(user_id: i32, message: String, secret: String) -> Opti
 
     
     let response = client
-    .post("https://lisek.world/api/v1/server/message")
-    .body(json!({ "message": message, "to": user_id }).to_string())
-    .header("X-Key", secret)
+    .post("https://c.lisek.world/api/v2/bancho/notification")
+    .body(json!({ "message": message, "message_type": "pm", "target": user_id.to_string(), "key": secret }).to_string())
     .header("Content-Type", "application/json")
     .send()
     .await;

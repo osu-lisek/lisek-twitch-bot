@@ -11,8 +11,7 @@ use twitch_irc::{
 };
 
 use crate::{bancho::bancho::send_message, db::{
-    beatmap::Beatmap,
-    integrations::{Integration, LinkedIndegration},
+    beatmap::OnlineBeatmapset, integrations::{Integration, LinkedIndegration}
 }};
 
 mod config;
@@ -141,19 +140,19 @@ async fn main() {
                         let beatmap_id = id_capture.as_str().parse::<i64>().unwrap();
                         trace!("Fetching beatmap with id: {}", beatmap_id);
 
-                        let beatmap = Beatmap::fetch_from_db_by_id(&context.db, beatmap_id).await;
+                        let beatmap = OnlineBeatmapset::fetch_from_db_by_id(&context.db, beatmap_id).await;
 
                         if let Some(beatmap) = beatmap {
                             trace!("Found beatmap: {:?}", beatmap);
                             ctx
-                                .say(private_message.channel_login.to_owned().to_lowercase(), beatmap.format())
+                                .say(private_message.channel_login.to_owned().to_lowercase(), beatmap.format(beatmap_id))
                                 .await
                                 .expect("Failed to send message.");
 
                             //Sending it to user
                             let user = users_with_twitch_integration.iter().find(|x| x.platform_id == private_message.channel_id);
                             if let Some(user) = user {
-                                let response = send_message(user.user_id, beatmap.format_osu(private_message.sender.login.clone()), configuration.secret.clone()).await;
+                                let response = send_message(user.user_id, beatmap.format_osu(private_message.sender.login.clone(), beatmap_id), configuration.secret.clone()).await;
 
                                 if let Some(response) = response {
                                     if !response.ok { 
